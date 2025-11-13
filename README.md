@@ -7,12 +7,12 @@ This application is built to run on Windows and MAC.
 ## Install for Windows:
 1. Download the packaged application for Windows [here](movieConvert-WINDOWS.zip).
 2. Extract files
-3. Launch application by clicking on *movieConvert-WINDOWS/dist/MovieConvert.exe*
+3. Double-click on **MovieConvert.exe**
 
 ## Install for MAC:
-1. Download the packaged application for MAC [here]().
+1. Download the packaged application for MAC [here](movieConvert-macOS.zip).
 2. Extract files
-3. Launch application by clicking on convertMovie/dist/movieConvert.app
+3. Double-click on **MovieConvert.app**
 
 ## FFMPEG - latest version
 1. Verify FFMPEG section is green in the app.
