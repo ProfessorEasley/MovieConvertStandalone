@@ -7,12 +7,21 @@ This application is built to run on Windows and MAC.
 ## Install for Windows:
 1. Download the packaged application for Windows [here](movieConvert-WINDOWS.zip).
 2. Extract files
-3. Double-click on **MovieConvert.exe**
+3. Launch the app by clicking on _movieConvert-WINDOWS/_**MovieConvert.exe**
 
 ## Install for MAC:
 1. Download the packaged application for MAC [here](movieConvert-macOS.zip).
 2. Extract files
-3. Double-click on **MovieConvert.app**
+3. Launch the app by clicking on _movieConvert-macOS/_**MovieConvert.app**
+### If Mac gives an Error "Apple could not verify...", click Done and follow these steps
+1. Go to Settings
+2. Select **Privacy & Security**
+3. Scroll down till you find
+   >"MovieConvert" was blocked to protect your Mac.
+5. Click **Open Anyway**
+6. On the **Open "MovieConvert"?** dialog box, click **Open Anyway**
+7. Authenticate your Mac user account.
+8. The app should launch now.
 
 ## FFMPEG - latest version
 1. Verify FFMPEG section is green in the app.
