@@ -24,7 +24,6 @@ class InputSource:
         self.fileName, _ = os.path.splitext(os.path.basename(filePath))
         self.ext = filePath.split(".")[-1]
         self.fileFormat = getFileFormat(self.ext)
-        print(self.fileName)
     
 def getOS():
     global osName
@@ -66,7 +65,7 @@ def __getVideoDimensions(filePath):
     try:
         cap = cv2.VideoCapture(filePath)
         if not cap.isOpened():
-            print(f"Error: Could not open video file at {filePath}")
+            # print(f"Error: Could not open video file at {filePath}")
             return None, None
 
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -74,7 +73,7 @@ def __getVideoDimensions(filePath):
         cap.release()
         return width, height
     except Exception as e:
-        print(f"Error processing video with OpenCV: {e}")
+        # print(f"Error processing video with OpenCV: {e}")
         return None, None
 
 
@@ -91,7 +90,7 @@ def verifySource(filePath):
         match = re.search(pattern, fileName) # check if it's the first image in the sequence, i.e. ends with 01, 001, 0001 etc.
         if match:
             filePathwithPattern = os.path.join(os.path.dirname(filePath), f'{fileName[:match.start(1)]}%0{len(match.group(1))}d.{ext}')
-            print(filePathwithPattern)
+            # print(filePathwithPattern)
             return True, filePathwithPattern
 
         else:
@@ -177,24 +176,24 @@ def addSource(filePath, ind, isOld):
     else:
         __sourceList[ind] = filePath
 
-    print("on adding new source")
+    # print("on adding new source")
     print(__sourceList)
 
-def deleteFromSources(ind):
-    try:
-        __sourceList.pop(ind)
-        return True
-    except IndexError:
-        output_log.append("Empty source, nothing to delete.")
-        print(output_log)
-        return True
-    return False
+# def deleteFromSources(ind):
+#     try:
+#         __sourceList.pop(ind)
+#         return True
+#     except IndexError:
+#         output_log.append("Empty source, nothing to delete.")
+#         print(output_log)
+#         return True
+#     return False
 
 def moveInSrc(oldInd, newInd, numSources):
     if numSources == len(__sourceList):
         item = __sourceList.pop(oldInd)
         __sourceList.insert(newInd, item)
-    print(__sourceList)
+    # print(__sourceList)
 
 def checkIfFileExists(fileDir, fileName, fileFormat):
     filePath = os.path.join(fileDir, fileName + "." + fileFormat)

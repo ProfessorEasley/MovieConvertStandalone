@@ -564,7 +564,7 @@ class ConverMovieGUI(QMainWindow):
                         
             else:
                 # if failed, select the next one
-                print("selecting next one")
+                # print("selecting next one")
                 nextLabel = self.sourceList[self.currentlySelectedSrcInd]
                 nextLabel.setSelected()
                 for src in self.sourceList:
@@ -590,7 +590,7 @@ class ConverMovieGUI(QMainWindow):
 
             curr_layoutLabelInd = self.sourceListLayout.indexOf(sourceLabeltoMove)
             if curr_layoutLabelInd > 0:
-                print("here")
+                # print("here")
                 item = self.sourceListLayout.takeAt(curr_layoutLabelInd)
                 widget = item.widget()
                 if widget:
@@ -603,7 +603,7 @@ class ConverMovieGUI(QMainWindow):
             # srcHnd.moveInSrc(self.currentlySelectedSrcInd, self.currentlySelectedSrcInd+1, len(self.sourceList) )
             self.sourceList[self.currentlySelectedSrcInd +1].position -=1
             sourceLabeltoMove = self.sourceList.pop(self.currentlySelectedSrcInd)
-            print(sourceLabeltoMove.text())
+            # print(sourceLabeltoMove.text())
             self.sourceList.insert(sourceLabeltoMove.position +1, sourceLabeltoMove)
             sourceLabeltoMove.position +=1
             self.currentlySelectedSrcInd +=1
@@ -615,7 +615,7 @@ class ConverMovieGUI(QMainWindow):
             while count > 0 and self.sourceListLayout.itemAt(count - 1).spacerItem():
                 count -= 1
             if 0 <= curr_layoutLabelInd < count - 1:
-                print("here")
+                # print("here")
                 item = self.sourceListLayout.takeAt(curr_layoutLabelInd)
                 widget = item.widget()
                 if widget:
@@ -705,10 +705,10 @@ class ConverMovieGUI(QMainWindow):
         self.fileProportionsLayout.addWidget(self.fileHeight)
 
         self.keepProportionsCheckbox = QCheckBox("Keep Proportions")
-        # self.keepProportionsCheckbox = CustomIndicatorCheckBox("Keep Proportions")
+        self.keepProportionsCheckbox = CustomIndicatorCheckBox("Keep Proportions")
         self.keepProportionsCheckbox.setEnabled(False)
         self.keepProportionsCheckbox.toggled.connect(self.on_checkbox_toggled)
-        self.keepProportionsCheckbox.setStyleSheet(CHECKBOX_STYLESHEET)
+        # self.keepProportionsCheckbox.setStyleSheet(CHECKBOX_STYLESHEET)
         self.fileProportionsLayout.addWidget(self.keepProportionsCheckbox)
 
         sectionLayout.addLayout(self.fileProportionsLayout)
@@ -727,12 +727,12 @@ class ConverMovieGUI(QMainWindow):
 
     def on_frameDigit_selection_changed(self, index):
         selected_text = self.frameDigDropdown.currentText()
-        print(f"Selected: {selected_text} (Index: {index})")
+        # print(f"Selected: {selected_text} (Index: {index})")
         # You can update other widgets or perform actions here
 
     def on_fileFormat_selection_changed(self, index):
         selected_text = self.fileFormatDropdown.currentText()
-        print(f"Selected: {selected_text} (Index: {index})")
+        # print(f"Selected: {selected_text} (Index: {index})")
         if selected_text not in ["JPEG","PNG"]:
             self.frameDigDropdown.setEnabled(False)
         else:
@@ -748,12 +748,12 @@ class ConverMovieGUI(QMainWindow):
 
     def setOutputDimensions(self, filePath):
         width,height = srcHnd.getSourceDimensions(filePath)
-        print(width,height)
+        # print(width,height)
         if width is not None and height is not None:
             self.fileWidth.setText(f"{width}")
-            print(width)
+            # print(width)
             self.fileHeight.setText(f"{height}")
-            print(height)
+            # print(height)
             self.keepProportionsCheckbox.setEnabled(True)
             self.keepProportionsCheckbox.setChecked(True)
 

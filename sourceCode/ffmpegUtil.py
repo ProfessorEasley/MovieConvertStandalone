@@ -5,11 +5,36 @@ import shutil
 import subprocess
 import re
 import tempfile
+import traceback
 
 ffmpegCommand = []
 ffmpegPath = "ffmpeg"
 kwargs = {}
 os_Name = ""
+
+log_dir = os.path.expanduser("~/MovieConvertLogs")
+os.makedirs(log_dir, exist_ok=True)  # create directory if it doesn't exist
+
+ffmpeg_log_path = os.path.join(log_dir, "ffmpeg_log.txt")
+error_log_path = os.path.join(log_dir, "error_log.txt")
+
+# Set working directory to the folder containing the executable or script
+if getattr(sys, 'frozen', False):
+    # running from PyInstaller bundle
+    os.chdir(os.path.dirname(sys.executable))
+else:
+    # running in development
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+def basePath():
+    import sys, os
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return base_path
+    # return os.path.join(base_path, relative_path)
+
 def check_ffmpeg(osName,filePath= "" ):
     """
     Checks if the ffmpeg executable exists within the Python application's folder.
@@ -19,70 +44,57 @@ def check_ffmpeg(osName,filePath= "" ):
     os_Name = osName
     # Define potential ffmpeg executable names for different OS
     ffmpeg_names = ["ffmpeg", "ffmpeg.exe"]
-    print(osName)
 
     if filePath:
         filePath1 = filePath.replace("\\","/")
         fileName = filePath1.split("/")[-1]
         if fileName in ffmpeg_names and os.path.exists(filePath):
-            if os_Name == "Windows": ffmpegPath = filePath
+            ffmpegPath = filePath
             return [filePath, True]
         else:
             return ["Incorrect File. Please select again.", False]
 
-    
-    if getattr(sys, 'frozen', False):
-        # if running application.exe 
-        base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(sys.executable)
-    else:
-        # Get the directory of the current script
-        base_path = os.path.dirname(os.path.abspath(__file__))
+    base_path = basePath()
 
-    ffmpegDir_path = None
-    if osName == "Darwin":
-        ffmpegDir_path = base_path
-            
-    elif osName == "Windows":
-        listOfDir = os.listdir(base_path)
-        for dir in listOfDir:
-            dir_path = os.path.join(base_path ,dir )
-            if os.path.isdir(dir_path) and "ffmpeg" in dir.lower():
-                bin_path =  os.path.join(dir_path, "bin")
-                print(bin_path)
-                if os.path.isdir(bin_path): 
-                    ffmpegDir_path = bin_path
-                    print(ffmpegDir_path)
-                    break
-                
+    ffmpegDirPath = os.path.join(base_path, "ffmpeg")
+    if os_Name == "Windows":
+        ffmpegDirPath = os.path.join(ffmpegDirPath, "bin")         
     
-    if ffmpegDir_path:
+    if os.path.isdir(ffmpegDirPath):
         for name in ffmpeg_names:
-            ffmpeg_path = os.path.join(ffmpegDir_path, name)
-            print(ffmpeg_path)
+            ffmpeg_path = os.path.join(ffmpegDirPath, name)
+            # print(ffmpeg_path)
             if os.path.exists(ffmpeg_path) and os.path.isfile(ffmpeg_path) and os.access(ffmpeg_path, os.X_OK):
-               print("Its a file") 
-               if osName == "Windows": ffmpegPath = ffmpeg_path
+               ffmpegPath = ffmpeg_path
                return [ffmpeg_path, True]
 		
             else:
                 ffmpeg_path = "Couldn't find ffmpeg.exe file. Please browse and select manually." 
                 
-    return [ffmpeg_path, False]
+    return ["Couldn't find ffmpeg.exe file. Please browse and select manually." , False]
 
-def setSubprocessOptions():
-    kwargs = {
-        "stdout" : subprocess.PIPE,
-        "stderr" : subprocess.PIPE,
-        "text" : True,
-        "shell" : False
-    }
 
-    if os_Name == "Windows":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+def run_ffmpeg(cmd):
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if result.returncode != 0:
+            # Write stderr to a log file for debugging
+            with open(ffmpeg_log_path, "w") as f:
+                f.write(result.stderr or "ffmpeg failed with no stderr output")
+            # print("FFmpeg failed! Check ffmpeg_log.txt")
+        else:
+            # print("FFmpeg succeeded.")
+            return True
+    except Exception as e:
+        # print("FFmpeg Error.", e)
+        with open(error_log_path, "w") as f:
+            f.write(traceback.format_exc())
+
+    return False
 
 
 def convert(sourceList, outputDir, outputFileName, outputFileFormat, frameDigits, outputSize):
-    setSubprocessOptions()
+    # setSubprocessOptions()
     # ffmpegCommand = ["ffmpeg", "-nostdin", "-y"]
     numSources = len(sourceList)
     outputFilePath = os.path.join(outputDir, f"{outputFileName}.{outputFileFormat.extension}")
@@ -93,7 +105,6 @@ def convert(sourceList, outputDir, outputFileName, outputFileFormat, frameDigits
         success, msg = convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputFileName, outputSize, frameDigits)
 
     return success, msg
-        
 
 
 def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, outputSize):
@@ -111,8 +122,8 @@ def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, out
                     vid_path = convertVideoFormat(tempOutputFilePath, ffmpegCommand, inputFile, outputFileFormat, outputSize)
                 if vid_path is not None:
                     video_paths.append(vid_path)
-            print("========================================================================================")
-            print(video_paths)
+            # print("========================================================================================")
+            # print(video_paths)
             # input("\n⏸️ Paused. Check temp files, then press Enter to continue...")
             if len(video_paths) > 1:
                 success, msg = concatVideos(video_paths, outputFilePath, outputFileFormat, outputSize)
@@ -129,6 +140,7 @@ def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, out
             msg = f"Sucess: Video Created at: {vid_path}"
 
     return success, msg
+
 
 def convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputFileName, outputSize, frameDigits):
     success, msg = False, ""
@@ -156,33 +168,38 @@ def convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputF
         
         outputFilePattern = getFilePattern(outputFileName, outputFileFormat.extension, frameDigits)
         outputFilePath = os.path.join(newdir, outputFilePattern)
-
         
         success, msg = convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, outputFilePath)
 
     return success, msg
 
+
 def convertImgSeqtoMov(outputFilePath, ffmpegCommand, inputFile, inputFilePattern, outputFileFormat, outputSize):
     inputFilePathwithPattern = os.path.join(os.path.dirname(inputFile.filePath), inputFilePattern)
 
-    print("========================================================================================")
-    print(inputFilePathwithPattern)
+    # print("========================================================================================")
+    # print(inputFilePathwithPattern)
     ffmpegCommand += ["-framerate", "24", "-i", inputFilePathwithPattern, "-vf", f"scale={outputSize[0]}:{outputSize[1]}", "-vsync", "vfr"]
 
     ffmpegCommand = getFFmpegVidCodec(ffmpegCommand, outputFileFormat)
         
     ffmpegCommand += [outputFilePath]
 
-    print("========================================================================================")
-    print("Converting img seq to video using: ",ffmpegCommand)
+    # print("========================================================================================")
+    # print("Converting img seq to video using: ",ffmpegCommand)
 
-    try:
-        subprocess.run(ffmpegCommand, **kwargs, check=True)
-
+    if run_ffmpeg(ffmpegCommand):
         return outputFilePath
+    
+    return None
+    # try:
+    #     subprocess.run(ffmpegCommand, **kwargs, check=True)
 
-    except subprocess.CalledProcessError as e:
-        return None
+    #     return outputFilePath
+
+    # except subprocess.CalledProcessError as e:
+    #     return None
+
 
 def convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, outputFilePath):
     ffmpegCommand += ["-i" , inputFilePath, "-vf", f"scale={outputSize[0]}:{outputSize[1]}"]
@@ -191,36 +208,45 @@ def convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, 
     
     ffmpegCommand += [outputFilePath]
 
-    try:
-        print("========================================================================================")
-        print("Converting video to Img seq using: ",ffmpegCommand)
-        result = subprocess.run(ffmpegCommand, **kwargs, check=True)
-        print("========================================================================================")
-        print(outputFilePath)
+    if run_ffmpeg(ffmpegCommand):
         return True, f"Success: images created at : {outputFilePath}"
-    except subprocess.CalledProcessError as e:
-        return False, f"Failed: Couldn't convert to images because of the following error: {e}"
+    
+    return False, f"Failed: Couldn't convert to images because of the following error."
+    # try:
+    #     print("========================================================================================")
+    #     print("Converting video to Img seq using: ",ffmpegCommand)
+    #     result = subprocess.run(ffmpegCommand, **kwargs, check=True)
+    #     print("========================================================================================")
+    #     print(outputFilePath)
+    #     return True, f"Success: images created at : {outputFilePath}"
+    # except subprocess.CalledProcessError as e:
+    #     return False, f"Failed: Couldn't convert to images because of the following error: {e}"
 
 
 
 def convertVideoFormat(outputFilePath, ffmpegCommand, inputFile, outputFileFormat, outputSize):
 
-    print("========================================================================================")
-    print(inputFile.filePath)
+    # print("========================================================================================")
+    # print(inputFile.filePath)
     ffmpegCommand += ["-i", inputFile.filePath, "-vf", f"scale={outputSize[0]}:{outputSize[1]}"]
     ffmpegCommand = getFFmpegVidCodec(ffmpegCommand, outputFileFormat)
 
     ffmpegCommand += [outputFilePath]
-    try:
-        print("========================================================================================")
-        print("Converting video format using: ",ffmpegCommand)
-        subprocess.run(ffmpegCommand, **kwargs, check=True)
-        print("========================================================================================")
-        print(outputFilePath)
+
+    if run_ffmpeg(ffmpegCommand):
         return outputFilePath
-    except subprocess.CalledProcessError as e:
-        print(e)
-        return None
+    
+    return None
+    # try:
+    #     print("========================================================================================")
+    #     print("Converting video format using: ",ffmpegCommand)
+    #     subprocess.run(ffmpegCommand, **kwargs, check=True)
+    #     print("========================================================================================")
+    #     print(outputFilePath)
+    #     return outputFilePath
+    # except subprocess.CalledProcessError as e:
+    #     print(e)
+    #     return None
 
 
 
@@ -244,26 +270,33 @@ def concatVideos(videoPaths, outputFilePath, outputFileFormat, outputSize):
 
     cmd = getFFmpegVidCodec(cmd, outputFileFormat)
     cmd += [outputFilePath]
-    try:
-        print("Concatenating videos with command:", " ".join(cmd))
-        subprocess.run(cmd, **kwargs, check=True)
+
+    if run_ffmpeg(cmd):
         os.remove(list_file_path)
-        return True, f"Success: Video Created at {outputFilePath}"
-    except subprocess.CalledProcessError as e:
-        return False, f"FFMPEG ERROR: couldn't convert to video with error {e}"
+        return True, f"Success: Video created at : {outputFilePath}"
+    
+    return False, f"FFMPEG ERROR: couldn't concatenate videos."
+
+    # try:
+    #     print("Concatenating videos with command:", " ".join(cmd))
+    #     subprocess.run(cmd, **kwargs, check=True)
+    #     os.remove(list_file_path)
+    #     return True, f"Success: Video Created at {outputFilePath}"
+    # except subprocess.CalledProcessError as e:
+    #     return False, f"FFMPEG ERROR: couldn't convert to video with error {e}"
     
 def getFilePattern(fileName, ext, padding = None):
 
     match = re.search(r'(?<!\d)(0*1)$', fileName) # find a pattern of numbers like 01,001,0001 etc. in the file name
     if padding is None and match:
         number_part = match.group(1)
-        print(number_part)
+        # print(number_part)
         filePattern = f'{fileName[:match.start(1)]}%0{len(match.group(1))}d.{ext}'
-        print(filePattern)
+        # print(filePattern)
 
     else:
         filePattern = f'{fileName}_%0{padding}d.{ext}'
-        print(filePattern)
+        # print(filePattern)
 
     return filePattern
 
@@ -276,8 +309,8 @@ def getFFmpegVidCodec(ffmpegCommand, fileFormat):
         ffmpegCommand += ['-c:v', 'rawvideo', '-pix_fmt', 'yuv420p']
     elif fileFormat.extension == "mov":
         ffmpegCommand += ['-c:v', 'mjpeg', '-q:v', '3']
-    else:
-        print("unsupported file pattern")
+    # else:
+    #     ("unsupported file pattern")
 
     return ffmpegCommand
     
