@@ -99,12 +99,12 @@ def convert(sourceList, outputDir, outputFileName, outputFileFormat, frameDigits
     numSources = len(sourceList)
     outputFilePath = os.path.join(outputDir, f"{outputFileName}.{outputFileFormat.extension}")
     if outputFileFormat.is_movie:
-        success, msg = convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, outputSize)
+        success, outputFilePath, msg = convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, outputSize)
 
     elif not outputFileFormat.is_movie:
-        success, msg = convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputFileName, outputSize, frameDigits)
+        success,outputFilePath, msg = convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputFileName, outputSize, frameDigits)
 
-    return success, msg
+    return success,outputFilePath, msg
 
 
 def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, outputSize):
@@ -126,7 +126,7 @@ def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, out
             # print(video_paths)
             # input("\n⏸️ Paused. Check temp files, then press Enter to continue...")
             if len(video_paths) > 1:
-                success, msg = concatVideos(video_paths, outputFilePath, outputFileFormat, outputSize)
+                success, outputFilePath, msg = concatVideos(video_paths, outputFilePath, outputFileFormat, outputSize)
             
     elif numSources ==1:
         ffmpegCommand = [ffmpegPath, "-nostdin", "-y"]
@@ -138,8 +138,9 @@ def convertToVideo(numSources, sourceList, outputFileFormat, outputFilePath, out
         if vid_path:
             success = True
             msg = f"Sucess: Video Created at: {vid_path}"
+            outputFilePath = vid_path
 
-    return success, msg
+    return success, outputFilePath, msg
 
 
 def convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputFileName, outputSize, frameDigits):
@@ -169,9 +170,9 @@ def convertToImages(numSources, sourceList, outputFileFormat, outputDir, outputF
         outputFilePattern = getFilePattern(outputFileName, outputFileFormat.extension, frameDigits)
         outputFilePath = os.path.join(newdir, outputFilePattern)
         
-        success, msg = convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, outputFilePath)
+        success, outputFilePath, msg = convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, outputFilePath)
 
-    return success, msg
+    return success, outputFilePath, msg
 
 
 def convertImgSeqtoMov(outputFilePath, ffmpegCommand, inputFile, inputFilePattern, outputFileFormat, outputSize):
@@ -209,9 +210,9 @@ def convertToImgSeq(ffmpegCommand, inputFilePath, outputSize, outputFileFormat, 
     ffmpegCommand += [outputFilePath]
 
     if run_ffmpeg(ffmpegCommand):
-        return True, f"Success: images created at : {outputFilePath}"
+        return True, outputFilePath, f"Success: images created at : {outputFilePath}"
     
-    return False, f"Failed: Couldn't convert to images because of the following error."
+    return False, "", f"Failed: Couldn't convert to images because of the following error."
     # try:
     #     print("========================================================================================")
     #     print("Converting video to Img seq using: ",ffmpegCommand)
@@ -273,9 +274,9 @@ def concatVideos(videoPaths, outputFilePath, outputFileFormat, outputSize):
 
     if run_ffmpeg(cmd):
         os.remove(list_file_path)
-        return True, f"Success: Video created at : {outputFilePath}"
+        return True, outputFilePath, f"Success: Video created at : {outputFilePath}"
     
-    return False, f"FFMPEG ERROR: couldn't concatenate videos."
+    return False, "", f"FFMPEG ERROR: couldn't concatenate videos."
 
     # try:
     #     print("Concatenating videos with command:", " ".join(cmd))
@@ -306,9 +307,15 @@ def getFFmpegVidCodec(ffmpegCommand, fileFormat):
         # ffmpegCommand += ['-c:v','libx264','-c:a', 'aac', '-movflags', '+faststart']
         ffmpegCommand += ['-c:v','libx264','-an', '-movflags', '+faststart']
     elif fileFormat.extension == "avi":
-        ffmpegCommand += ['-c:v', 'rawvideo', '-pix_fmt', 'yuv420p']
+        if fileFormat.forMaya:
+            ffmpegCommand += ['-c:v', 'rawvideo', '-pix_fmt', 'yuv420p'] # grainy if not for maya
+        else:
+            ffmpegCommand += ['-c:v', 'rawvideo', '-pix_fmt', 'bgr24'] # windows media player compatible, not grainy
     elif fileFormat.extension == "mov":
-        ffmpegCommand += ['-c:v', 'mjpeg', '-q:v', '3']
+        if fileFormat.forMaya:
+            ffmpegCommand += ['-c:v', 'mjpeg', '-q:v', '3']
+        else:
+            ffmpegCommand += ['-c:v', 'prores_ks', '-profile:v', '3']
     # else:
     #     ("unsupported file pattern")
 

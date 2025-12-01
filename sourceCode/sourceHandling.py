@@ -6,9 +6,10 @@ import shutil
 import re
 import ffmpegUtil as fUt
 import cv2
+import subprocess
 
-FileFormat = namedtuple('FileFormat', ['name', 'extension', 'is_movie'])
-FILE_FORMATS = [FileFormat('PNG', 'png', False), FileFormat('JPEG', 'jpg', False), FileFormat('JPEG', 'jpeg', False), FileFormat('MP4', 'mp4', True), FileFormat('AVI', 'avi', True), FileFormat('MOV', 'mov', True)]
+FileFormat = namedtuple('FileFormat', ['name', 'extension', 'is_movie', 'forMaya'])
+FILE_FORMATS = [FileFormat('PNG', 'png', False, False), FileFormat('JPEG', 'jpg', False, False), FileFormat('JPEG', 'jpeg', False, False), FileFormat('MP4', 'mp4', True, False), FileFormat('AVI', 'avi', True, False), FileFormat('MOV', 'mov', True, False), FileFormat('AVI', 'avi', True, True), FileFormat('MOV', 'mov', True, True)]
 __output_log = ""
 osName = ""
 __sourceList = []
@@ -17,6 +18,7 @@ __outputDir = ""
 __outputFileName = "newFile"
 __frameDigits = 0
 __outputSize = []
+__playVideo = False
 
 class InputSource:
     def __init__(self, filePath):
@@ -104,13 +106,16 @@ def convertMovie(inputConversionData):
     global __output_log
     unpackData(inputConversionData)
 
-    success, msg = fUt.convert(__sourceList, __outputDir, __outputFileName, __outputFileFormat, __frameDigits, __outputSize)
+    success, outputFilePath, msg = fUt.convert(__sourceList, __outputDir, __outputFileName, __outputFileFormat, __frameDigits, __outputSize)
     __output_log += msg
+
+    if success and __playVideo:
+        open_with_default_player(outputFilePath)
     return __output_log
     
 
 def unpackData(inputConversionData):
-    global __output_log, __outputDir, __outputFileName, __outputFileFormat, __frameDigits, __outputSize, __outputFilePath
+    global __output_log, __outputDir, __outputFileName, __outputFileFormat, __frameDigits, __outputSize, __outputFilePath, __playVideo
     __sourceList.clear()
     # input source list
     for inpSrc in inputConversionData["InputSources"]:
@@ -153,6 +158,10 @@ def unpackData(inputConversionData):
 
     __output_log += (f"Output Dimensions: {__outputSize} \n")
 
+    # 5. file dimensions
+
+    __playVideo = inputConversionData["PlayVideo"]
+
     # for src in __sourceList:
     #     print(src.filePath)
     #     print(src.fileFormat)
@@ -165,8 +174,23 @@ def unpackData(inputConversionData):
 
 def getFileFormat(ext):
     for ff in FILE_FORMATS:
+        if "Maya" in ext and ff.forMaya:
+            ext = ext.split(" ")[0]
+        # elif "Maya" not in ext and not ff.forMaya:
+        #         return ff
         if ext.lower() == ff.extension:
             return ff
+
+
+def open_with_default_player(path):
+    if sys.platform.startswith("win"):
+        os.startfile(path)  # Windows
+        
+    elif sys.platform.startswith("darwin"):
+        subprocess.call(["open", path])  # macOS
+        
+    else:
+        subprocess.call(["xdg-open", path])  # Linux
 
 def addSource(filePath, ind, isOld):
     if len(__sourceList) -1 < ind:
@@ -196,6 +220,8 @@ def moveInSrc(oldInd, newInd, numSources):
     # print(__sourceList)
 
 def checkIfFileExists(fileDir, fileName, fileFormat):
+    if "Maya" in fileFormat:
+        fileFormat = fileFormat.split(" ")[0]
     filePath = os.path.join(fileDir, fileName + "." + fileFormat)
     if os.path.exists(filePath):
         return True

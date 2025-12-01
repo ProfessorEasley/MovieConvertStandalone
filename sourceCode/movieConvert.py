@@ -1,12 +1,22 @@
+"""
+Author: Rashi Sinha
+
+v1.0 (Date: 11-12-25)
+v1.1 (Date: 11-25-25): Updated UI and browse folder location, added play video option
+"""
+
 import platform
 import sys
 import os
 from PyQt6.QtCore import * 
 from PyQt6.QtGui import * 
 from PyQt6.QtWidgets import *
+from PyQt6.QtCore import QStandardPaths
 import sourceHandling as srcHnd
 # from PyQt6.QtCore import Qt
 import base64
+
+VERSION = "1.1"
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -62,25 +72,35 @@ DROPDOWN_STYLESHEET = f"""
         color: {FADED_TEXT_COLOR};
     }}
 """
-CHECKBOX_STYLESHEET = f"""
-    QCheckBox::indicator {{
-        width: 16px;
-        height: 16px;
-    }}
 
-    QCheckBox::indicator:unchecked {{
-        background-color : {TEXT_FIELD_COLOR}
-    }}
-
-    QCheckBox::indicator:checked {{
-        image: url({icon_path})
-    }}
-
-    QCheckBox {{
+RADIOBUTTON_STYLESHEET = f"""
+    QRadioButton:enabled {{
         color: {TEXT_COLOR}
-        spacing: 10px; /* space between checkbox and text */
+    }}
+
+    QRadioButton:disabled {{
+        color: {FADED_TEXT_COLOR}
     }}
 """
+# CHECKBOX_STYLESHEET = f"""
+#     QCheckBox::indicator {{
+#         width: 16px;
+#         height: 16px;
+#     }}
+
+#     QCheckBox::indicator:unchecked {{
+#         background-color : {TEXT_FIELD_COLOR}
+#     }}
+
+#     QCheckBox::indicator:checked {{
+#         image: url({icon_path})
+#     }}
+
+#     QCheckBox {{
+#         color: {TEXT_COLOR}
+#         spacing: 10px; /* space between checkbox and text */
+#     }}
+# """
 # image: url("data:image/png;base64,{checkbox_icon_b64}");
 # border-image: url("data:image/png;base64,{checkbox_icon_b64}") 0 0 0 0 stretch stretch;
 
@@ -197,10 +217,16 @@ class CustomIndicatorCheckBox(QCheckBox):
             y = rect.y() + (rect.height() - scaled.height()) // 2
             painter.drawPixmap(x, y, scaled)
 
-        # Draw text next to checkbox
-        text_rect = QRect(rect.right() + 8, 0, self.width() - rect.width() - 8, self.height())
-        painter.setPen(QColor("white"))
-        painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, self.text())
+        if self.isChecked() or self.isEnabled():
+            # Draw text next to checkbox
+            text_rect = QRect(rect.right() + 6, 0, self.width() - rect.width() - 6, self.height())
+            painter.setPen(QColor(TEXT_COLOR))
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, self.text())
+        else:
+            # Draw text next to checkbox
+            text_rect = QRect(rect.right() + 6, 0, self.width() - rect.width() - 6, self.height())
+            painter.setPen(QColor(FADED_TEXT_COLOR))
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, self.text())
 
         painter.end()
 
@@ -277,7 +303,7 @@ class ConverMovieGUI(QMainWindow):
         self.__createGUIElements()
 
     def __createWindow(self):
-        self.setWindowTitle("Convert Movie")  # Set the window title
+        self.setWindowTitle(f"Movie Convert v{VERSION}")  # Set the window title
         self.setGeometry(100, 100, 600, 200)  # Set position and size (x, y, width, height)
         self.resize(600,200) 
 
@@ -362,13 +388,14 @@ class ConverMovieGUI(QMainWindow):
         self.osSection.addWidget(self.OSlabel)
 
         self.PCradioButton = QRadioButton("PC")
-        self.PCradioButton.setStyleSheet(f"color: {TEXT_COLOR};")
-        
+        # self.PCradioButton.setStyleSheet(f"color: {TEXT_COLOR};")
+        self.PCradioButton.setStyleSheet(RADIOBUTTON_STYLESHEET)
         self.PCradioButton.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.osSection.addWidget(self.PCradioButton)
 
         self.MACradioButton = QRadioButton("MAC")
-        self.MACradioButton.setStyleSheet(f"color: {TEXT_COLOR};")
+        # self.MACradioButton.setStyleSheet(f"color: {TEXT_COLOR};")
+        self.MACradioButton.setStyleSheet(RADIOBUTTON_STYLESHEET)
         self.MACradioButton.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.osSection.addWidget(self.MACradioButton)
 
@@ -378,6 +405,7 @@ class ConverMovieGUI(QMainWindow):
         else:
             self.MACradioButton.setChecked(True)
             self.PCradioButton.setEnabled(False)
+            
         sectionLayout.addLayout(self.osSection)
 
         self.ffmpegBrowseSection = QHBoxLayout()
@@ -404,7 +432,7 @@ class ConverMovieGUI(QMainWindow):
         sectionLayout.addLayout(self.ffmpegBrowseSection)
       
     def browseBtnClicked(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Select FFMPEG File", "", "All Files (*)")
+        fileName, _ = QFileDialog.getOpenFileName(self, "Select FFMPEG File", self.input_default_dir, "All Files (*)")
         ffmpegPath, isfound = srcHnd.verifyFFMPEG(fileName)
         self.ffmpegLoc.setText(ffmpegPath)
         if isfound:
@@ -415,6 +443,8 @@ class ConverMovieGUI(QMainWindow):
         # self.ffmpegLoc.setText(srcHnd.fUt.check_ffmpeg(fileName))
 
     def addInputWidgets(self, sectionLayout):
+
+        self.input_default_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
 
         self.sourceListArea = QScrollArea(maximumHeight=100, minimumHeight=100)
         # self.content_area.setWidgetResizable(True)
@@ -500,8 +530,12 @@ class ConverMovieGUI(QMainWindow):
         sectionLayout.addLayout(self.sourceBtnsLayout)
 
     def inputBrowseBtnClicked(self):
-        filePath, _ = QFileDialog.getOpenFileName(self, "Select Input File", "", "Image/Video Files (*.png *.jpg *.jpeg *.mp4 *.avi *.mov)")
+        start_dir = self.input_default_dir or QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        filePath, _ = QFileDialog.getOpenFileName(self, "Select Input File",start_dir, "Image/Video Files (*.png *.jpg *.jpeg *.mp4 *.avi *.mov)")
         if filePath:
+            # remember folder for the session
+            self.input_default_dir = os.path.dirname(filePath)
+
             sourceVerified, pathTodisplay = srcHnd.verifySource(filePath)
             if sourceVerified:
                 srcLabel = self.sourceList[self.currentlySelectedSrcInd]
@@ -632,8 +666,9 @@ class ConverMovieGUI(QMainWindow):
             self.currentlySelectedSrcInd = selectedSrcLabelInd
         self.sourceOptionsLabel.setText(f"Source {selectedSrcLabelInd+1}")
 
-
     def addOutputWidgets(self, sectionLayout):
+
+        self.output_default_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
 
         self.outputDirLayout = QHBoxLayout()
         self.inputLabel = QLabel("Output Directory")
@@ -675,13 +710,17 @@ class ConverMovieGUI(QMainWindow):
         sectionLayout.addLayout(self.outputFileOptionsLayout)
 
         self.fileFormatLayout = QHBoxLayout()
-        self.fileFormatLabel = QLabel("File Name:")
+        self.fileFormatLabel = QLabel("File Format:")
         self.fileFormatLabel.setStyleSheet(f"color: {TEXT_COLOR};")
         self.fileFormatLayout.addWidget(self.fileFormatLabel)
-        self.fileFormatDropdown = CustomComboBox(["JPEG","PNG","MP4", "AVI", "MOV"])
+        self.fileFormatDropdown = CustomComboBox(["JPEG","PNG","MP4", "AVI", "AVI (for Maya)", "MOV", "MOV (for Maya)"])
         self.fileFormatDropdown.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.fileFormatDropdown.activated.connect(self.on_fileFormat_selection_changed)
         self.fileFormatLayout.addWidget(self.fileFormatDropdown)
+        self.viewFileCheckbox = CustomIndicatorCheckBox("Play Video")
+        self.viewFileCheckbox.setEnabled(False)
+        # self.viewFileCheckbox.toggled.connect(self.on_view_checkbox_toggled)
+        self.fileFormatLayout.addWidget(self.viewFileCheckbox)
 
         sectionLayout.addLayout(self.fileFormatLayout)
 
@@ -704,7 +743,7 @@ class ConverMovieGUI(QMainWindow):
         self.fileHeight.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.fileProportionsLayout.addWidget(self.fileHeight)
 
-        self.keepProportionsCheckbox = QCheckBox("Keep Proportions")
+        # self.keepProportionsCheckbox = QCheckBox("Keep Proportions")
         self.keepProportionsCheckbox = CustomIndicatorCheckBox("Keep Proportions")
         self.keepProportionsCheckbox.setEnabled(False)
         self.keepProportionsCheckbox.toggled.connect(self.on_checkbox_toggled)
@@ -720,8 +759,10 @@ class ConverMovieGUI(QMainWindow):
 
 
     def outputBrowseBtnClicked(self):
-        folderPath= QFileDialog.getExistingDirectory(self, "Choose Directory","",QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks)
+        start_dir = self.output_default_dir or QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        folderPath = QFileDialog.getExistingDirectory(self, "Choose Directory",start_dir,QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks)
         if folderPath:
+            self.output_default_dir = folderPath
             self.outputDirLoc.setText(folderPath)
 
 
@@ -735,8 +776,12 @@ class ConverMovieGUI(QMainWindow):
         # print(f"Selected: {selected_text} (Index: {index})")
         if selected_text not in ["JPEG","PNG"]:
             self.frameDigDropdown.setEnabled(False)
+            self.viewFileCheckbox.setEnabled(True)
+            self.viewFileCheckbox.setChecked(True)
         else:
             self.frameDigDropdown.setEnabled(True)
+            self.viewFileCheckbox.setChecked(False)
+            self.viewFileCheckbox.setEnabled(False)
 
     def on_checkbox_toggled(self, checked):
         if checked and self.fileWidth.text() and self.fileHeight.text():
@@ -774,6 +819,7 @@ class ConverMovieGUI(QMainWindow):
         else:
             self.msg = QMessageBox(self) # Pass self as parent for proper modality
             self.msg.setWindowTitle("Error")
+            self.msg.setWindowIcon(QApplication.windowIcon())
             self.msg.setText("Please select input files to convert.")
             self.msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             result = self.msg.exec()
@@ -781,7 +827,7 @@ class ConverMovieGUI(QMainWindow):
 
     def packageData(self):
 
-        coversionData = {"InputSources":None, "OutputDir":"", "OutputFileName":"","OutputFormat": None, "OutputFrameDigits": None, "OuputWidth": None, "OuputHeight": None}
+        coversionData = {"InputSources":None, "OutputDir":"", "OutputFileName":"","OutputFormat": None, "OutputFrameDigits": None, "OuputWidth": None, "OuputHeight": None, "PlayVideo": False}
         inputSourceList = [src.filePath for src in self.sourceList if src.fileSelected]
         if inputSourceList:
             coversionData["InputSources"] = inputSourceList
@@ -792,6 +838,7 @@ class ConverMovieGUI(QMainWindow):
             if self.frameDigDropdown.isEnabled() : coversionData["OutputFrameDigits"] = int(self.frameDigDropdown.currentText())
             if self.fileWidth.text() : coversionData["OuputWidth"] = int(self.fileWidth.text())
             if self.fileHeight.text() :  coversionData["OuputHeight"] = int(self.fileHeight.text())
+            coversionData["PlayVideo"] = self.viewFileCheckbox.isChecked() 
 
         return coversionData
 
@@ -805,6 +852,7 @@ class ConverMovieGUI(QMainWindow):
             QMessageBox.StandardButton.Cancel # Default button (optional)
         )
 
+
         # Process the user's reply
         if reply == QMessageBox.StandardButton.Yes:
             return True
@@ -813,7 +861,8 @@ class ConverMovieGUI(QMainWindow):
 
 def main():
     converMovieApp = QApplication(sys.argv)
-    # converMovieApp.setStyle("Fusion")
+    converMovieApp.setStyle("Fusion")
+    converMovieApp.setWindowIcon(QIcon(resource_path("icons/app_icon.png")))
     mainWindow = ConverMovieGUI()
     mainWindow.show()
     sys.exit(converMovieApp.exec())

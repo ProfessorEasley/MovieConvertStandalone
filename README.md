@@ -1,8 +1,8 @@
 # MovieConvertStandalone
-A verison fo the MovieConvert script for Maya that is now a standalone - needs FFMPEG to run.  
+A verison of the MovieConvert script for Maya that is now a standalone - needs FFMPEG to run.  
 This application is built to run on Windows and MAC.  
   
-<img src="images/app_GUI_img.png" alt="Example Image" width="512"/>
+<img src="images/app_GUI_v1.1.png.png" alt="APP GUI v1.1" width="512"/>
 
 ## Install for Windows:
 1. Download the packaged application for Windows [here](movieConvert-WINDOWS.zip).
