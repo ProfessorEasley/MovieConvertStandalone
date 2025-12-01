@@ -2,15 +2,15 @@
 A verison of the MovieConvert script for Maya that is now a standalone - needs FFMPEG to run.  
 This application is built to run on Windows and MAC.  
   
-<img src="images/app_GUI_v1.1.png.png" alt="APP GUI v1.1" width="512"/>
+<img src="images/app_GUI_v1.1.png" alt="APP GUI v1.1" width="512"/>
 
 ## Install for Windows:
-1. Download the packaged application for Windows [here](movieConvert-WINDOWS.zip).
+1. Download the packaged application v1.1 for Windows [here](https://github.com/ProfessorEasley/MovieConvertStandalone/blob/main/movieConvert-WINDOWS-v1.1.zip).
 2. Extract files
 3. Launch the app by clicking on _movieConvert-WINDOWS/_**MovieConvert.exe**
 
 ## Install for MAC:
-1. Download the packaged application for MAC [here](movieConvert-macOS.zip).
+1. Download the packaged application v1.1 for MAC [here](https://github.com/ProfessorEasley/MovieConvertStandalone/blob/main/movieConvert-macOS-v1.1.zip).
 2. Extract files
 3. Launch the app by clicking on _movieConvert-macOS/_**MovieConvert.app**
 ### If Mac gives an Error "Apple could not verify...", click Done and follow these steps
